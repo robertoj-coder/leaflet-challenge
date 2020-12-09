@@ -1,11 +1,6 @@
 
-var myMap = L.map("mapid", {
-  center: [45.52, -122.67],
-  zoom: 2
-});
-
-// console.log(myMap)
 var quakeUrl= "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson"
+var plateUrl ="https://raw.githubusercontent.com/fraxen/tectonicplates/master/GeoJSON/PB2002_boundaries.json"
 
 console.log("works")
 
@@ -51,13 +46,13 @@ console.log("works")
   satelliteMap.addTo(myMap);
 
 var quakes = new L.LayerGroup();  
-// var plates = new L.LayerGroup();
+var plates = new L.LayerGroup();
 
 
 var overlayMaps = {
   
   "Earthquakes": quakes,
-  // "Tectonic Plates": plates
+  "Tectonic Plates": plates
 };
  
 L.control.layers(baseMaps, overlayMaps, {
@@ -66,40 +61,42 @@ L.control.layers(baseMaps, overlayMaps, {
 
 d3.json(quakeUrl, function(data) {
 
- 
+  
+
+
+// used a gradient to determine the color of the depth automatically
+function getColor(depth) {
+	var r, g, b = 0;
+	if(depth > 200) {
+		r = 255;
+		g = Math.round(5.1 * depth);
+	}
+	else {
+		g = 255;
+		r = Math.round(510 - 5.10 * depth);
+	}
+	var h = r * 0x10000 + g * 0x100 + b * 0x1;
+	return '#' + ('000000' + h.toString(16)).slice(-6);
+}
+
+// creating the market size and color according the earthquake depth
     function styleInfo(feature) {
       return {
         opacity: 1,
         fillOpacity: 1,
-        fillColor: getColor(feature.properties.mag),
+        fillColor: getColor(feature.geometry.coordinates[2]),
         color: "#000000",
-        radius: getRadius(feature.properties.mag),
+        radius: markerSize(feature.properties.mag),
         stroke: true,
         weight: 0.5
       };
     }
   
-    // Define the color of the marker based on the magnitude of the earthquake.
-    function getColor(magnitude) {
-      switch (true) {
-        case magnitude > 5:
-          return "#ea2c2c";
-        case magnitude > 4:
-          return "#ea822c";
-        case magnitude > 3:
-          return "#ee9c00";
-        case magnitude > 2:
-          return "#eecc00";
-        case magnitude > 1:
-          return "#d4ee00";
-        default:
-          return "#98ee00";
-      }
-    }
+    
   
-    // define the radius of the earthquake marker based on its magnitude.
+    // // define the radius of the earthquake marker based on its magnitude.
   
-    function getRadius(magnitude) {
+    function markerSize(magnitude) {
       if (magnitude === 0) {
         return 1;
       }
@@ -114,7 +111,7 @@ d3.json(quakeUrl, function(data) {
       },
       style: styleInfo,
       onEachFeature: function(feature, layer) {
-        layer.bindPopup("Magnitude: " + feature.properties.mag + "<br>Location: " + feature.properties.place);
+        layer.bindPopup("Magnitude: " + feature.properties.mag + "<br>Location: " + feature.properties.place + "<br> Depth: "+ feature.geometry.coordinates[2]);
       }
   
     }).addTo(quakes);
@@ -126,20 +123,21 @@ d3.json(quakeUrl, function(data) {
       position: "bottomright"
     });
   
-  
+  // creating the legend "difficult to match the color with the gradient"
     legend.onAdd = function() {
       var div = L
         .DomUtil
         .create("div", "info legend");
   
-      var grades = [0, 1, 2, 3, 4, 5];
+      var grades = [-10, 10, 25, 50, 100, 150];
       var colors = [
-        "#98ee00",
+        "#f7f711",
         "#d4ee00",
-        "#eecc00",
-        "#ee9c00",
-        "#ea822c",
-        "#ea2c2c"
+        "#88e87d",
+        "#2ae815",
+        "#8a2222",
+        "#f50202"
+        
       ];
   
   
@@ -152,7 +150,22 @@ d3.json(quakeUrl, function(data) {
   
   
     legend.addTo(myMap);
+
+
+    d3.json(plateUrl,function(tectodata) {
+ 
+      L.geoJson(tectodata, {
+        color: "#f24c0a",
+        weight: 3
+      })
+      .addTo(plates);
+
+      // add the tectonicplates layer to the map.
+      plates.addTo(myMap);
   
     
   });
-console.log('works')
+
+});
+
+ console.log('works')
